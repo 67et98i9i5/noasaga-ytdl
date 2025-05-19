@@ -31,57 +31,73 @@
     const bar = document.getElementById('bar');
     const statusText = document.getElementById('status-text');
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const url = urlInput.value.trim();
-      if (!url.includes("youtu")) {
-        alert("Invalid YouTube URL");
-        return;
-      }
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const url = urlInput.value.trim();
+  if (!url.includes("youtu")) {
+    alert("Invalid YouTube URL");
+    return;
+  }
 
-      button.disabled = true;
-      progress.style.display = 'block';
-      bar.style.width = '0%';
-      statusText.textContent = 'Starting download...';
+  button.disabled = true;
+  progress.style.display = 'block';
+  bar.style.width = '0%';
+  statusText.textContent = 'Starting download...';
 
-      let progressValue = 0;
-      const interval = setInterval(() => {
-        progressValue += 10;
-        if (progressValue > 90) progressValue = 90;
-        bar.style.width = progressValue + '%';
-        statusText.textContent = `Downloading... ${progressValue}%`;
-      }, 500);
+  let progressValue = 0;
+  const interval = setInterval(() => {
+    progressValue += 10;
+    if (progressValue > 90) progressValue = 90;
+    bar.style.width = progressValue + '%';
+    statusText.textContent = `Downloading... ${progressValue}%`;
+  }, 500);
 
-      try {
-        const downloadUrl = `/download?url=${encodeURIComponent(url)}`;
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = '';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      } catch {
-        alert("Download blocked. Enable permissions.");
-      }
+  try {
+    const downloadUrl = `/download?url=${encodeURIComponent(url)}`;
+    const response = await fetch(downloadUrl);
 
-      setTimeout(() => {
-        clearInterval(interval);
-        bar.style.width = '100%';
-        statusText.textContent = 'Download should start shortly.';
-        button.disabled = true;
-        downloadAnotherBtn.style.display = 'block';
-      }, 6000);
-    });
-
-    downloadAnotherBtn.addEventListener('click', () => {
-      urlInput.value = '';
+    if (!response.ok || !response.headers.get('content-type').startsWith('audio')) {
+      const errorText = await response.text();
+      alert('Download error: ' + errorText);
+      clearInterval(interval);
       progress.style.display = 'none';
-      bar.style.width = '0%';
       statusText.textContent = '';
-      downloadAnotherBtn.style.display = 'none';
       button.disabled = false;
-      urlInput.focus();
-    });
+      return;
+    }
+
+    const blob = await response.blob();
+    clearInterval(interval);
+    bar.style.width = '100%';
+    statusText.textContent = 'Download complete.';
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+
+    // Try to extract filename from content-disposition header
+    const disposition = response.headers.get('content-disposition');
+    let filename = 'audio.mp3';
+    if (disposition && disposition.includes('filename=')) {
+      filename = disposition.split('filename=')[1].replace(/["']/g, '');
+    }
+    a.download = filename;
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+
+    button.disabled = true;
+    downloadAnotherBtn.style.display = 'block';
+  } catch (err) {
+    alert('Download failed: ' + err.message);
+    clearInterval(interval);
+    progress.style.display = 'none';
+    statusText.textContent = '';
+    button.disabled = false;
+  }
+});
+
   </script>
 </body>
 </html>

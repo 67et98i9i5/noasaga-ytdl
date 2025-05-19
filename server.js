@@ -7,13 +7,15 @@ const path = require('path');
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.static('public'));
 
 app.get('/download', async (req, res) => {
   const { url } = req.query;
-  if (!url || !ytdl.validateURL(url)) return res.status(400).send('Invalid URL');
+  if (!url || !ytdl.validateURL(url)) {
+    return res.status(400).send('Invalid URL');
+  }
 
   try {
     const info = await ytdl.getInfo(url);
@@ -27,16 +29,13 @@ app.get('/download', async (req, res) => {
       .audioBitrate(320)
       .format('mp3')
       .on('error', err => {
-        if (!res.headersSent) {
-          res.status(500).send('FFmpeg error: ' + err.message);
-        }
+        console.error('FFmpeg error:', err);
+        if (!res.headersSent) res.status(500).send('FFmpeg processing error');
       })
       .pipe(res, { end: true });
-
   } catch (err) {
-    if (!res.headersSent) {
-      res.status(500).send('Error processing URL');
-    }
+    console.error('Processing error:', err);
+    if (!res.headersSent) res.status(500).send('Error processing URL');
   }
 });
 
