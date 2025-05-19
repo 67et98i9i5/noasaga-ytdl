@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Noasaga Project</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>Noasaga project</header>
+  <main>
+    <div class="container">
+      <form id="download-form">
+        <textarea id="url" placeholder="Paste YouTube URL" required></textarea>
+        <button type="submit" id="download-btn">Download MP3</button>
+        <button type="button" id="download-another-btn" style="display:none;">Download Another</button>
+        <div id="progress">
+          <div id="bar"></div>
+        </div>
+        <p id="status-text"></p>
+      </form>
+      <h3 id="credits">Website made by Abhinav Singh. More updates would soon be introduced</h3>
+    </div>
+  </main>
+  <script>
+    const form = document.getElementById('download-form');
+    const urlInput = document.getElementById('url');
+    const button = document.getElementById('download-btn');
+    const downloadAnotherBtn = document.getElementById('download-another-btn');
+    const progress = document.getElementById('progress');
+    const bar = document.getElementById('bar');
+    const statusText = document.getElementById('status-text');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url = urlInput.value.trim();
+      if (!url.includes("youtu")) {
+        alert("Invalid YouTube URL");
+        return;
+      }
+
+      button.disabled = true;
+      progress.style.display = 'block';
+      bar.style.width = '0%';
+      statusText.textContent = 'Starting download...';
+
+      let progressValue = 0;
+      const interval = setInterval(() => {
+        progressValue += 10;
+        if (progressValue > 90) progressValue = 90;
+        bar.style.width = progressValue + '%';
+        statusText.textContent = `Downloading... ${progressValue}%`;
+      }, 500);
+
+      try {
+        const downloadUrl = `/download?url=${encodeURIComponent(url)}`;
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = '';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch {
+        alert("Download blocked. Enable permissions.");
+      }
+
+      setTimeout(() => {
+        clearInterval(interval);
+        bar.style.width = '100%';
+        statusText.textContent = 'Download should start shortly.';
+        button.disabled = true;
+        downloadAnotherBtn.style.display = 'block';
+      }, 6000);
+    });
+
+    downloadAnotherBtn.addEventListener('click', () => {
+      urlInput.value = '';
+      progress.style.display = 'none';
+      bar.style.width = '0%';
+      statusText.textContent = '';
+      downloadAnotherBtn.style.display = 'none';
+      button.disabled = false;
+      urlInput.focus();
+    });
+  </script>
+</body>
+</html>
